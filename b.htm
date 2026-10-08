@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Interactive Attendance Sheet</title>
+<style>
+  /* A4 ল্যান্ডস্কেপে মার্জিন নিখুঁতভাবে সেট করা যাতে এক পৃষ্ঠাতেই ফিট হয় */
+  @page {
+    size: A4 landscape;
+    margin: 5mm;
+  }
+  body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 5px;
+    color: #000;
+    background: #fff;
+  }
+  .header {
+    text-align: center;
+    margin-bottom: 5px;
+  }
+  .header h3 {
+    margin: 2px 0;
+    color: #000;
+    font-size: 13px;
+  }
+  .header h2 {
+    margin: 2px 0;
+    font-size: 13px;
+  }
+  .header p {
+    margin: 2px 0;
+    font-size: 13px;
+    font-weight: bold;
+    text-decoration: underline;
+  }
+  
+  /* মেটা ইনফো টেবিল */
+  .meta-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 5px;
+    font-size: 13px;
+  }
+  .meta-table td {
+    padding: 3px 5px;
+    border: 1px solid #444;
+    vertical-align: middle;
+  }
+  .label {
+    font-weight: bold;
+    background-color: #f2f2f2;
+    width: 14%;
+  }
+  .checkbox-group {
+    font-size: 11px;
+    line-height: 1.3;
+  }
+  
+  /* ইনপুট ফিল্ড */
+  input[type="text"] {
+    width: 98%;
+    border: 1px dashed #999;
+    padding: 2px;
+    font-size: 14px;
+    font-family: inherit;
+    background: #fffbe6;
+  }
+  input[type="checkbox"] {
+    cursor: pointer;
+    transform: scale(1.0);
+    margin-right: 2px;
+    vertical-align: middle;
+  }
+
+  /* মূল অ্যাটেন্ডেন্স টেবিল (ঠিক ১০ জন, উচ্চতা কমানো হয়েছে যাতে এক পৃষ্ঠায় থাকে) */
+  .main-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+  .main-table th, .main-table td {
+    border: 1px solid #000;
+    padding: 4px;
+    text-align: center;
+    vertical-align: middle;
+  }
+  .main-table th {
+    background-color: #f2f2f2;
+    color: black;
+    font-weight: bold;
+    font-size: 12px;
+  }
+  
+  /* প্রিন্ট মোডে এডিটেবল ব্যাকগ্রাউন্ড ও বর্ডার রিমুভ করার জন্য */
+  @media print {
+    .no-print {
+      display: none;
+    }
+    input[type="text"] {
+      border: none;
+      background: transparent;
+      padding: 0;
+    }
+  }
+  
+  .print-btn-container {
+    text-align: center;
+    margin-bottom: 10px;
+  }
+  .print-btn {
+    background-color: #1a73e8;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    font-size: 13px;
+    cursor: pointer;
+    border-radius: 4px;
+    font-weight: bold;
+  }
+  .print-btn:hover {
+    background-color: #1557b0;
+  }
+</style>
+
+<script>
+  // অ্যাক্টিভিটি কোড লিখলে অটো ইভেন্ট নেম আসার ডাটাবেস (আপনার প্রয়োজনমতো কোড ও নাম এখানে যুক্ত করতে পারেন)
+  const activityDatabase = {
+    "1.1.1.1": "Offer better services at ANC/PNC corner by doing minor repair, maintenance (DH, UHC, MCWC)",
+"1.1.1.2": "Ensuring availability of essential equipment and Logistics at ANC/PNC corners (DH, UHC, MCWC, UHFWC)",
+"1.1.1.3": "Strengthening the communication system to track ANC 4 Mother (DH, UHC, MCWC)",
+"1.1.2.1": "Minor repair maintenance of the labor room (DH, UHC, MCWC)",
+"1.1.2.2": "Availability essential logistic and equipment for safe vaginal delivery (Need based DH, UHC, MCWC)",
+"1.1.2.3": "Rollout the  EMOTIVE at 3 MCWC, 2 in Panchagarh 1 in Lalmonirhat)",
+"1.1.2.4": "Continuation EMOTIVE Drill at Facility level (DH, UHC, MCWC)",
+"1.1.2.5": "Maintenance Support of EMOTIVE Bandle per facility (DH, UHC, MCWC, UHFWC)",
+"1.1.4.1": "Logistical support for VIA screening (DH & UHC)",
+"1.1.5.1": "Signage, management table which is firm and clean, Penguine sucker, Baby weighing scale, Bag&Mask ",
+"1.1.6.1": "Ensure logistics in KMC corners at DH, Sadar MCWC, UHC (KMC Chair, KMC Beds, KMC binders, Weighing Scale, Thermometer )",
+"1.1.6.2": "Minor repair and maintenance of KMC corner (DH, Sadar MCWC, UHC)",
+"1.1.7.2": "Minor repair  of SCANU  ",
+"1.1.8.1": "Facilitate to conduct drill (DH, UHC)",
+"1.1.8.2": "Emergency preparedness at emergency rooms of UHC and DH",
+"1.1.9.4": "Logistics for establishing  pneumonia day care center DH",
+"1.1.9.7": "Establish coordination between IMCI corner and DOTs corner to enhance child TB screening and management (DH & UHC)",
+"1.1.10.2": "Supplies (non drug/pharma/food/supplement) for SAM corner",
+"1.1.10.3": "Consultative meeting to revitalization of District Nutrition Coordination Committee (DNCC) ",
+"1.1.10.5": "Printing IEC/BCC, job aid support for the roll-out and scaling up of MMS intervention for PLW ",
+"1.1.11.5": "Pediatric triage and continuity plans (climate resilient pediatric services) for child services during emergency  - Orientation ",
+"1.1.11.6": "Pediatric triage and continuity plans (climate resilient pediatric services) for child services during emergency - drill session ",
+"1.1.11.8": "Ensure availability of IPC related IEC materials in IMCI and pediatric unit in DH and Female/pediatric at UHC",
+"1.1.11.9": "Ensure availability of IPC  materials (mask, handwash, sanitizer) in IMCI and pediatric unit in DH and Female/pediatric at UHC",
+"1.1.12.1": "Support local health authorities to identify low-coverage areas (consultation meeting)",
+"1.2.1": "Provision of equipment, logistics and supplies in IMCI-N corner (DH-2, UHC-8) and IMCI-N services ",
+"1.2.4": "Minor repair of the BF and IMCI-N corner ",
+"1.2.5": "Provide support for generator fuel (need based)",
+"1.3.4": "Support regular and functional facility level QIC meetings to strengthen facility-level quality improvement and accountability. (DH, Sadar MCWC, UHC)",
+"1.3.9": "Conduct structured facility-level clinical mentorship visits to designated Points of Care (POCs) by mentors from the established GOB mentor pool.(DH, MCWC, UHC)",
+"1.3.10": "Conduct project-led bedside clinical mentorship and on-the-job training (OJT) visits linked with post-training follow-up.",
+"1.3.14": "Conduct GOB-led Joint Supervision Visits (JSVs) to strengthen facility-level service quality, performance, and accountability. (UHC, MCWC, UHFWC)",
+"1.3.17": "Procure IPC materials & PPE for  selected Point-of-Care (ANC corner, labor room and  SCANU). DH, UHC, Sadar MCWC.",
+"1.4": "Capacity of providers strengthened to deliver lifesaving services",
+"1.4.3": "Facilitate 2 days refresher training on IMCI-N for nurse. 50 nurses for 02 districts",
+"1.4.4": "Facilitate 2 days district level refresher training on SAM management. 50 nurses for 02 districts",
+"1,4,5": "Capacity development and operationalize pneumonia day care center. 25 nurses for 02 districts",
+"1.4.5.1": "IMCI-N short orientation for nursing students and interns. 100 nurses for 02 districts.",
+"1.4.10": "Conduct facility-level one-day cascading orientation on Infection Prevention and Control (IPC) for service providers at selected Points of Care (POCs).",
+"1.4.13": "Orientation on MMS at Facility Level (Midwife, SSN , MO and MOMCH-FP, MO Clinic )  Facilitated by MCGL Staffs. DH, UHC, MCWC",
+"1.5.1.3": "Refresher training for URRTs on infectious disease outbreak investigation and response ",
+"1.5.1.4": "Orientation of DRRTs on infectious disease outbreak investigation and response ",
+"1.5.1.9": "Quarterly review meeting of URRTs to review current outbreak situation, potential outbreaks, prepare response plans, spot reports, and develop list volunteer local elites/ organization/ team to support URRT during outbreak response. Two meetings per UHC.",
+"1.5.1.10": "Provide transport support for vaccine transport in consultation with local managers (need based). UHC.",
+"1.5.1.11": "Incentives for volunteers during outbreak. UHC",
+"1.6.2.4": "Conduct Introductory, Consultation and Coordination Meetings with Existing and Prospective donors at the District Level. 2 meetings per district.",
+"1.6.2.5": "Conduct upazila level coordination meetings with prospective stakeholders at upazila level for resource mobilization for MCGL supported Health Facilities such as, transport, effective referral, facility readiness, increase service coverage, support quality improvement of services and so on. 2 meetings per Upazila & DH",
+"2.1.1.6": "Facilitate timely referral of Severe Acute Malnutrition (SAM) cases to SAM Corners through routine upazila-level CHCP monthly meetings.",
+"2.2.1": "Ensure availability and use of MUAC tapes for nutritional status screening by SACMOs at UH&FWCs. 10 tapes per UH&FWC.",
+"2.2.2": "Strengthen facility readiness for timely referral and emergency management through provision of essential equipment and supplies at UH&FWCs",
+"2.5.1": "Quarterly one-day district level workshop to review EPI micro plan, updating hard to reach and high risk areas, and categorization of EPI wards. Per district 02 workshop.",
+"2.5.2": "Provide logistics support to organize outreach immunization sessions. DH & UHC ",
+"2.5.3": "Support crash program for immunization in coordination with local managers focusing hard to reach/high/risk/low coverage/high drop-out areas. 10 session per district.",
+"2.5.6": "Conduct crash program in the identified wards. 24 crash program per district.",
+"3.1.1": "Organize joint Data Quality Assessment (DQA) visits. 2 visit per district",
+"3.3.1": "Support local-level DGHS managers in monthly data review meeting (Pause & Reflect session). 8 meetings per district.",
+"3.3.2": "Support local-level DGFP managers in quarterly data review meeting (Pause & Reflect session). 2 meeting per district.",
+"3.3.4": "Conduct monthly data review meeting (P&R session) at Partner Office. 8 meeting per district.",
+"PM-1.2": "Develop Joint implementation plan with GOB",
+"PM-1.6": "Organize quarterly planning and review meetings. Divisional meeting will be organize by divisional partner and cost will share by both partner"
+
+  };
+
+  function checkActivityCode() {
+    let codeInput = document.getElementById("activityCode").value.trim();
+    let eventNameInput = document.getElementById("eventName");
+    
+    if (activityDatabase[codeInput]) {
+      eventNameInput.value = activityDatabase[codeInput];
+    } else {
+      // কোড না মিলଲେ বা খালি থাকলে ইউজার নিজের মতো লিখতে পারবে
+      if(codeInput === "") {
+        eventNameInput.value = "";
+      }
+    }
+  }
+</script>
+</head>
+<body>
+
+  <!-- প্রিন্ট বাটন -->
+  <div class="print-btn-container no-print">
+    <button class="print-btn" onclick="window.print()">🖨️ Print Attendance Sheet (Strictly 1 Page)</button>
+    <p style="font-size: 11px; color: #555; margin-top: 3px;">*Type Activity Code to auto-fill Event Name, or write manually. Clean blank printing guaranteed!</p>
+  </div>
+
+  <!-- Header Section -->
+  <div class="header">
+    <p>RDRS Bangladesh</p>
+    <h3>MOMENTUM Country and Global Leadership (MCGL) Project</h3>
+    <h2>ATTENDANCE SHEET</h2>
+  </div>
+
+  <!-- Meta Information -->
+  <table class="meta-table">
+
+    <!-- নতুন অ্যাক্টিভিটি কোড অপশন -->
+    <tr>
+      
+      <td class="label" style="width: 12%;">Event Name:</td>
+      <td>
+        <input type="text" id="eventName" placeholder="">
+      </td>
+<td class="label">Activity Code:</td>
+      <td style="width: 10%;">
+        <input type="text" id="activityCode" oninput="checkActivityCode()" placeholder="">
+      </td>
+    </tr>
+    <tr>
+      <td class="label">Event Type:</td>
+      <td colspan="3" class="checkbox-group">
+        <label><input type="checkbox"> Workshop</label> &nbsp; 
+        <label><input type="checkbox"> Training</label> &nbsp; 
+        <label><input type="checkbox"> Orientation</label> &nbsp; 
+        <label><input type="checkbox"> Pause and learning session</label> &nbsp; 
+        <label><input type="checkbox"> Meeting</label> &nbsp; 
+        <label><input type="checkbox"> Coaching/Mentoring</label> &nbsp; 
+        <label><input type="checkbox"> Others: <input type="text" style="width: 400px; display:inline-block;"></label>
+      </td>
+    </tr>
+    <tr>
+      <td class="label">Category:</td>
+      <td colspan="3" class="checkbox-group">
+        <label><input type="checkbox"> MNH</label> &nbsp; 
+        <label><input type="checkbox"> Child Health</label> &nbsp; 
+        <label><input type="checkbox"> Nutrition</label> &nbsp; 
+        <label><input type="checkbox"> Immunization</label> &nbsp; 
+        <label><input type="checkbox"> QI</label> &nbsp; 
+        <label><input type="checkbox"> Emerging infectious disease</label> &nbsp; 
+        <label><input type="checkbox"> M&E</label> &nbsp; 
+        <label><input type="checkbox"> Private Sector Engagement (PSE)</label> <br>
+        <label><input type="checkbox"> Outbreak Preparedness & Response</label> &nbsp; 
+        <label><input type="checkbox"> Others: <input type="text" style="width: 400px; display:inline-block;"></label>
+      </td>
+    </tr>
+    <tr>
+      <td class="label">Venue / Upazila:</td>
+      <td ><input type="text"></td>
+      <td class="label">Date:</td>
+      <td><input type="text"></td>
+    </tr>
+  </table>
+
+  <!-- Participant Attendance Table (Exactly 10 rows) -->
+  <table class="main-table">
+    <thead>
+      <tr>
+        <th style="width: 4%;">SI.</th>
+        <th style="width: 21%;">Full Name</th>
+        <th style="width: 14%;">Designation</th>
+        <th style="width: 14%;">Organization</th>
+        <th style="width: 14%;">Address</th>
+        <th style="width: 17%;">Mobile Number & Email</th>
+        <th style="width: 6%;">Sex</th>
+        <th style="width: 10%;">Signature</th>
+      </tr>
+    </thead>
+    <tbody>
+      <script>
+        for (let i = 1; i <= 10; i++) {
+          document.write(`
+            <tr>
+              <td>${i}</td>
+              <td style="height: 35px;"></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+            </tr>
+          `);
+        }
+      </script>
+    </tbody>
+  </table>
+
+  <!-- Footer / Signatures (Checked by, Reviewed by, Approved by) -->
+  <table style="width: 100%; margin-top: 15px; border: none; font-size: 10px;">
+    <tr>
+      <td style="border: none; text-align: left; width: 33%;">
+        <strong>Prepared by:</strong><br><br>
+       
+       
+      </td>
+      <td style="border: none; text-align: center; width: 33%;">
+        <strong>Reviewed by:</strong><br><br>
+      
+       
+      </td>
+      <td style="border: none; text-align: right; width: 33%;">
+        <strong>Approved by:</strong><br><br>
+        
+        
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>
